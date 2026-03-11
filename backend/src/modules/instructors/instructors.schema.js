@@ -6,7 +6,7 @@ const { z } = require('zod');
 const updateProfileSchema = z.object({
   name:     z.string().min(1).max(100).optional(),
   bio:      z.string().max(1000).optional(),
-  photoUrl: z.string().url('URL invalide').optional().or(z.literal('')),
+  photoUrl: z.union([z.string().url({ message: 'URL invalide' }), z.literal('')]).optional(),
 });
 
 module.exports = { updateProfileSchema };
