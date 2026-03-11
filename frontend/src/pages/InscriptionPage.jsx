@@ -1,38 +1,37 @@
+import { useNavigate } from 'react-router-dom'
+import { api } from '../services/api'   // ← le seul import dont on a besoin
 import { ProfilPage } from './ProfilPage.jsx'
 
 export function InscriptionPage() {
   const token = localStorage.getItem('token')
   if (token) return <ProfilPage />
 
+  const navigate = useNavigate()
+
   async function onSubmit(e) {
     e.preventDefault()
 
     const form = new FormData(e.currentTarget)
-    const payload = {
-      name: String(form.get('name') || ''),
-      email: String(form.get('email') || ''),
-      password: String(form.get('password') || ''),
-      role: String(form.get('role') || 'ELEVE'),
+
+    try {
+      // api.auth.register fixe le rôle à 'ELEVE' en interne
+      // → le formulaire ne propose plus ce choix (faille de sécurité corrigée)
+      const data = await api.auth.register(
+        String(form.get('name') || ''),
+        String(form.get('email') || ''),
+        String(form.get('password') || ''),
+      )
+
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      window.dispatchEvent(new Event('auth-changed'))
+
+      // On redirige vers le profil au lieu d'un alert()
+      navigate('/profil', { replace: true })
+
+    } catch (err) {
+      alert(err.message)
     }
-
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-
-    const res = await fetch(`${API}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      alert(data?.message || 'Erreur inscription')
-      return
-    }
-
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user))
-    window.dispatchEvent(new Event('auth-changed'))
-    alert('Inscription OK')
   }
 
   return (
@@ -54,17 +53,11 @@ export function InscriptionPage() {
           <input name="password" type="password" minLength={8} required />
         </label>
 
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Rôle</span>
-          <select name="role" defaultValue="ELEVE">
-            <option value="ELEVE">ELEVE</option>
-            <option value="INSTRUCTEUR">INSTRUCTEUR</option>
-          </select>
-        </label>
+        {/* Le champ "Rôle" a été supprimé — tout nouvel utilisateur est ÉLÈVE.
+            Seul un admin pourra promouvoir quelqu'un INSTRUCTEUR côté back-office. */}
 
         <button type="submit">Créer mon compte</button>
       </form>
     </section>
   )
 }
-

@@ -1,5 +1,6 @@
-import { ProfilPage } from '../../pages/ProfilPage.jsx'
 import { Link, useNavigate } from 'react-router-dom'
+import { api } from '../../services/api'   // ← le seul import dont on a besoin
+import { ProfilPage } from '../../pages/ProfilPage.jsx'
 
 export function AuthPage() {
   const token = localStorage.getItem('token')
@@ -11,28 +12,24 @@ export function AuthPage() {
     e.preventDefault()
 
     const form = new FormData(e.currentTarget)
-    const payload = {
-      email: String(form.get('email') || ''),
-      password: String(form.get('password') || ''),
+
+    try {
+      // On appelle api.auth.login() — plus aucun fetch, header, ou URL ici
+      const data = await api.auth.login(
+        String(form.get('email') || ''),
+        String(form.get('password') || ''),
+      )
+
+      // En cas de succès, on stocke le token et l'utilisateur
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      window.dispatchEvent(new Event('auth-changed'))
+      navigate('/profil', { replace: true })
+
+    } catch (err) {
+      // api.js a déjà lancé l'erreur avec le bon message du backend
+      alert(err.message)
     }
-
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-    const res = await fetch(`${API}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      alert(data?.message || 'Erreur connexion')
-      return
-    }
-
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user))
-    window.dispatchEvent(new Event('auth-changed'))
-    navigate('/profil', { replace: true })
   }
 
   return (
@@ -70,4 +67,3 @@ function LinkInline({ to, children }) {
     </Link>
   )
 }
-
