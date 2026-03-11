@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ELEVE
+  INSTRUCTEUR
+}
+
+enum Location {
+  PISCINE
+  MER
+  BLUE_HOLE
+}
+
+enum CourseName {
+  INITIATION
+  AIDA1
+  AIDA2
+  AIDA3
+  AIDA4
+  AIDA_INSTRUCTEUR
+}
+
+enum CourseType {
+  STATIQUE
+  DYNAMIQUE_PALMES
+  DYNAMIQUE_SANS_PALMES
+  PROFONDEUR_PALMES
+  PROFONDEUR_SANS_PALMES
+  IMMERSION_LIBRE
+  POIDS_VARIABLE
+  NO_LIMITS
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coursesCreated Course[]
+  enrollments    Enrollment[]
+}
+
+model Course {
+  id          String     @id @default(uuid())
+  title       CourseName
+  description String
+  date        DateTime
+  location    Location
+  type        CourseType
+  capacity    Int
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id            String   @id @default(uuid())
+  userId        String
+  courseId      String
+  withEquipment Boolean
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}

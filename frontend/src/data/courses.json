@@ -1,0 +1,15 @@
+[
+  {
+    "id": "c1",
+    "title": "Initiation à l’apnée",
+    "level": "Débutant",
+    "durationMinutes": 45
+  },
+  {
+    "id": "c2",
+    "title": "Respiration & relaxation",
+    "level": "Intermédiaire",
+    "durationMinutes": 35
+  }
+]
+
