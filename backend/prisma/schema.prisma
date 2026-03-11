@@ -43,6 +43,8 @@ model User {
   email        String   @unique
   passwordHash String
   role         Role
+  bio          String?  // Texte libre de présentation (nullable)
+  photoUrl     String?  // URL d'une photo de profil (nullable)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

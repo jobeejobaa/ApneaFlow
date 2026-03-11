@@ -5,6 +5,7 @@ const { requireRole } = require('../middlewares/role.middleware');
 const authController = require('../modules/auth/auth.controller');
 const coursesController = require('../modules/courses/courses.controller');
 const enrollmentsController = require('../modules/enrollments/enrollments.controller');
+const instructorsController = require('../modules/instructors/instructors.controller');
 
 const router = Router();
 
@@ -37,6 +38,17 @@ router.get(
   '/me/enrollments',
   authenticateJWT,
   enrollmentsController.getMyEnrollments
+);
+
+// Instructors (public read)
+router.get('/instructors', instructorsController.list);
+
+// Update own instructor profile (INSTRUCTEUR only)
+router.patch(
+  '/instructors/me',
+  authenticateJWT,
+  requireRole('INSTRUCTEUR'),
+  instructorsController.updateMyProfile
 );
 
 module.exports = router;
