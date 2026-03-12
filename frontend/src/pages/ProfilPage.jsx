@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import { assetUrl } from '../utils/url'
@@ -18,8 +18,6 @@ export function ProfilPage() {
     name:            user?.name  ?? '',
     email:           user?.email ?? '',
     bio:             user?.bio   ?? '',
-    // Les champs mot de passe sont vides par défaut — l'utilisateur ne les
-    // remplit que s'il veut changer son mot de passe
     currentPassword: '',
     newPassword:     '',
     confirmPassword: '',
@@ -27,6 +25,25 @@ export function ProfilPage() {
 
   const [photoFile, setPhotoFile]       = useState(null)
   const [photoPreview, setPhotoPreview] = useState(user?.photoUrl ?? '')
+
+  // ── Chargement des données fraîches depuis l'API au montage ──────────────
+  // Le localStorage peut être incomplet (ex: bio/photoUrl absents après login)
+  useEffect(() => {
+    api.users.getMe()
+      .then(freshUser => {
+        const merged = { ...user, ...freshUser }
+        setUser(merged)
+        localStorage.setItem('user', JSON.stringify(merged))
+        setForm(prev => ({
+          ...prev,
+          name:  freshUser.name  ?? prev.name,
+          email: freshUser.email ?? prev.email,
+          bio:   freshUser.bio   ?? '',
+        }))
+        setPhotoPreview(freshUser.photoUrl ?? '')
+      })
+      .catch(() => { /* silencieux si pas connecté */ })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [saving, setSaving]             = useState(false)
   const [saveError, setSaveError]       = useState('')
 

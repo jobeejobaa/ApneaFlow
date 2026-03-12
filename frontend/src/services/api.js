@@ -76,6 +76,28 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+
+    update: (id, data) =>
+      request(`/api/courses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    // DELETE renvoie 204 (pas de body JSON), donc on gère à la main
+    remove: async (id) => {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${BASE_URL}/api/courses/${id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const err = new Error(data?.message || 'Erreur suppression')
+        err.status = res.status
+        throw err
+      }
+      return null
+    },
   },
 
   // ── Inscriptions aux cours ────────────────────────────────────────────────
@@ -94,6 +116,10 @@ export const api = {
 
   // ── Mon compte (tous rôles) ───────────────────────────────────────────────
   users: {
+    // Récupère le profil complet de l'utilisateur connecté (avec bio et photoUrl)
+    getMe: () =>
+      request('/api/users/me'),
+
     // data peut contenir : { name?, email?, currentPassword?, newPassword? }
     updateMe: (data) =>
       request('/api/users/me', {
