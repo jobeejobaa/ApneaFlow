@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../services/api'
+import { assetUrl } from '../../utils/url'
 
 // ─── Composant principal ────────────────────────────────────────────────────
 export function InstructeursPage() {
@@ -90,7 +91,7 @@ function InstructeurCard({ instructeur }) {
         {instructeur.photoUrl ? (
           // Photo réelle si l'instructeur en a une
           <img
-            src={instructeur.photoUrl}
+            src={assetUrl(instructeur.photoUrl)}
             alt={`Photo de ${instructeur.name}`}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             // Si l'URL est cassée, on masque l'img (l'avatar s'affichera à la place)

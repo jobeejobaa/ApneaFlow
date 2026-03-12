@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
+import { assetUrl } from '../utils/url'
 
 export function ProfilPage() {
   const navigate = useNavigate()
@@ -134,7 +135,7 @@ export function ProfilPage() {
             <div style={{ marginBottom: '1.25rem' }}>
               {user.photoUrl ? (
                 <img
-                  src={user.photoUrl.startsWith('/') ? `http://localhost:4000${user.photoUrl}` : user.photoUrl}
+                  src={assetUrl(user.photoUrl)}
                   alt="Photo de profil"
                   style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)' }}
                 />
@@ -242,7 +243,7 @@ export function ProfilPage() {
                   <span>Photo de profil</span>
                   {photoPreview && (
                     <img
-                      src={photoPreview.startsWith('/') ? `http://localhost:4000${photoPreview}` : photoPreview}
+                      src={assetUrl(photoPreview) ?? photoPreview}
                       alt="Aperçu"
                       style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.2)' }}
                     />
