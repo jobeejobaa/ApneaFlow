@@ -27,6 +27,22 @@ router.post(
   coursesController.create
 );
 
+// Course update (INSTRUCTEUR only, ownership checked in service)
+router.patch(
+  '/courses/:id',
+  authenticateJWT,
+  requireRole('INSTRUCTEUR'),
+  coursesController.update
+);
+
+// Course delete (INSTRUCTEUR only, ownership checked in service)
+router.delete(
+  '/courses/:id',
+  authenticateJWT,
+  requireRole('INSTRUCTEUR'),
+  coursesController.remove
+);
+
 // Enrollment (ELEVE only)
 router.post(
   '/courses/:id/enroll',
@@ -42,7 +58,8 @@ router.get(
   enrollmentsController.getMyEnrollments
 );
 
-// Mon compte (tous rôles) — nom, email, mot de passe
+// Mon compte (tous rôles) — profil complet + modification
+router.get('/users/me', authenticateJWT, usersController.getMe);
 router.patch('/users/me', authenticateJWT, usersController.updateMe);
 
 // Instructors (public read)

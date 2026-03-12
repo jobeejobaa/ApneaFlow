@@ -11,6 +11,19 @@ const SAFE_SELECT = {
   photoUrl: true,
 };
 
+async function getMe(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: SAFE_SELECT,
+  });
+  if (!user) {
+    const err = new Error('Utilisateur introuvable');
+    err.status = 404;
+    throw err;
+  }
+  return user;
+}
+
 async function updateMe(userId, data) {
   // On récupère l'utilisateur actuel pour les vérifications
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -63,4 +76,4 @@ async function updateMe(userId, data) {
   });
 }
 
-module.exports = { updateMe };
+module.exports = { getMe, updateMe };

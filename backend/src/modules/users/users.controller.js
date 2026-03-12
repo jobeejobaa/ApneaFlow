@@ -2,6 +2,19 @@ const usersService = require('./users.service');
 const { updateMeSchema } = require('./users.schema');
 
 /**
+ * GET /api/users/me
+ * Authentifié (tous rôles) — retourne le profil complet de l'utilisateur connecté.
+ */
+async function getMe(req, res, next) {
+  try {
+    const user = await usersService.getMe(req.user.id);
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * PATCH /api/users/me
  * Authentifié (tous rôles) — met à jour nom, email et/ou mot de passe.
  */
@@ -25,4 +38,4 @@ async function updateMe(req, res, next) {
   }
 }
 
-module.exports = { updateMe };
+module.exports = { getMe, updateMe };

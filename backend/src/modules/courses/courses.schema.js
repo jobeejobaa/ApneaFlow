@@ -19,4 +19,14 @@ const createCourseSchema = z.object({
   capacity: z.number().int().min(1).max(4),
 });
 
-module.exports = { createCourseSchema };
+// Pour la modification, tous les champs sont optionnels
+const updateCourseSchema = z.object({
+  title:       CourseNameEnum.optional(),
+  description: z.string().min(1).optional(),
+  date:        z.coerce.date().optional(),
+  location:    LocationEnum.optional(),
+  type:        CourseTypeEnum.optional(),
+  capacity:    z.number().int().min(1).max(4).optional(),
+});
+
+module.exports = { createCourseSchema, updateCourseSchema };

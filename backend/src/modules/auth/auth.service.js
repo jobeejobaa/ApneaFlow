@@ -26,7 +26,7 @@ async function register(data) {
     { expiresIn: env.jwtExpiresIn }
   );
   return {
-    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    user: { id: user.id, name: user.name, email: user.email, role: user.role, bio: user.bio ?? null, photoUrl: user.photoUrl ?? null },
     token,
   };
 }
@@ -52,7 +52,7 @@ async function login(data) {
     { expiresIn: env.jwtExpiresIn }
   );
   return {
-    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    user: { id: user.id, name: user.name, email: user.email, role: user.role, bio: user.bio ?? null, photoUrl: user.photoUrl ?? null },
     token,
   };
 }

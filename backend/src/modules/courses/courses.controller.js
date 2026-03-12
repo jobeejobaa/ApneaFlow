@@ -1,5 +1,5 @@
 const coursesService = require('./courses.service');
-const { createCourseSchema } = require('./courses.schema');
+const { createCourseSchema, updateCourseSchema } = require('./courses.schema');
 
 async function list(req, res, next) {
   try {
@@ -41,4 +41,30 @@ async function create(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create };
+async function update(req, res, next) {
+  try {
+    const parsed = updateCourseSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors?.[0]?.message ?? 'Validation error', code: 'BAD_REQUEST' });
+    }
+    const course = await coursesService.update(req.params.id, parsed.data, req.user.id);
+    res.json(course);
+  } catch (err) {
+    if (err.status === 403) return res.status(403).json({ message: err.message, code: err.code });
+    if (err.status === 404) return res.status(404).json({ message: err.message, code: err.code });
+    next(err);
+  }
+}
+
+async function remove(req, res, next) {
+  try {
+    await coursesService.remove(req.params.id, req.user.id);
+    res.status(204).send(); // 204 = succès sans contenu
+  } catch (err) {
+    if (err.status === 403) return res.status(403).json({ message: err.message, code: err.code });
+    if (err.status === 404) return res.status(404).json({ message: err.message, code: err.code });
+    next(err);
+  }
+}
+
+module.exports = { list, getById, create, update, remove };
