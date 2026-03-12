@@ -6,6 +6,7 @@ const authController = require('../modules/auth/auth.controller');
 const coursesController = require('../modules/courses/courses.controller');
 const enrollmentsController = require('../modules/enrollments/enrollments.controller');
 const instructorsController = require('../modules/instructors/instructors.controller');
+const { upload } = require('../config/upload');
 
 const router = Router();
 
@@ -49,6 +50,16 @@ router.patch(
   authenticateJWT,
   requireRole('INSTRUCTEUR'),
   instructorsController.updateMyProfile
+);
+
+// Upload photo de profil (INSTRUCTEUR only)
+// upload.single('photo') = multer traite UN fichier dont le champ s'appelle "photo"
+router.post(
+  '/instructors/me/photo',
+  authenticateJWT,
+  requireRole('INSTRUCTEUR'),
+  upload.single('photo'),
+  instructorsController.uploadPhoto
 );
 
 module.exports = router;

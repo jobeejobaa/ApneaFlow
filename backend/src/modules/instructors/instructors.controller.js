@@ -34,4 +34,28 @@ async function updateMyProfile(req, res, next) {
   }
 }
 
-module.exports = { list, updateMyProfile };
+/**
+ * POST /api/instructors/me/photo
+ * Protégé (INSTRUCTEUR) — reçoit un fichier image et met à jour photoUrl.
+ * Multer a déjà traité le fichier avant d'arriver ici :
+ * req.file contient les infos du fichier uploadé.
+ */
+async function uploadPhoto(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier reçu', code: 'BAD_REQUEST' });
+    }
+
+    // On construit l'URL publique du fichier
+    // req.file.filename = le nom généré par multer (ex: "1710000000000-123456.jpg")
+    // L'URL finale sera : http://localhost:4000/uploads/1710000000000-123456.jpg
+    const photoUrl = `/uploads/${req.file.filename}`;
+
+    const updated = await instructorsService.updateMyProfile(req.user.id, { photoUrl });
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, updateMyProfile, uploadPhoto };
