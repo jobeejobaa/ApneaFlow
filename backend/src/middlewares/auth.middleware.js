@@ -14,7 +14,7 @@ function authenticateJWT(req, res, next) {
   const token = authHeader.slice(7);
   try {
     const payload = jwt.verify(token, env.jwtSecret);
-    req.user = { id: Number(payload.sub), role: payload.role };
+    req.user = { id: payload.sub, role: payload.role };
     next();
   } catch {
     return res.status(401).json({ message: 'Unauthorized', code: 'UNAUTHORIZED' });

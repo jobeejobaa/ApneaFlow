@@ -63,7 +63,7 @@ export function Header({ title = 'Apnea Flow' }) {
           style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}
         >
           <HeaderLink to="/">Accueil</HeaderLink>
-          <HeaderLink to="/cours">Réserver un cours</HeaderLink>
+          <HeaderLink to="/reserver">Réserver un cours</HeaderLink>
           <HeaderLink to="/instructeurs">Les instructeurs</HeaderLink>
           <HeaderLink to="/faq-contact">FAQ</HeaderLink>
           {isAuthed ? (
