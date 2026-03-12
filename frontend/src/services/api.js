@@ -105,5 +105,29 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+
+    // Upload une photo de profil (fichier binaire, pas JSON)
+    // On utilise FormData au lieu de JSON.stringify.
+    // IMPORTANT : on ne met PAS Content-Type — le navigateur le génère
+    // automatiquement avec le bon "boundary" pour le multipart/form-data.
+    uploadPhoto: async (file) => {
+      const token = localStorage.getItem('token')
+      const body  = new FormData()
+      body.append('photo', file) // "photo" = le nom du champ attendu par multer
+
+      const res  = await fetch(`${BASE_URL}/api/instructors/me/photo`, {
+        method:  'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body,
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const err = new Error(data?.message || 'Erreur upload')
+        err.status = res.status
+        throw err
+      }
+      return data
+    },
   },
 }
