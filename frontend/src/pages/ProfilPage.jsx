@@ -5,37 +5,32 @@ import { api } from '../services/api'
 export function ProfilPage() {
   const navigate = useNavigate()
 
-  // ── On lit l'utilisateur depuis localStorage ──────────────────────────────
-  // On utilise useState avec une fonction d'initialisation (lazy init).
-  // La fonction entre parenthèses ne s'exécute qu'une seule fois au montage,
-  // pas à chaque re-render. C'est plus propre que useMemo pour ce cas.
   const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') || 'null')
-    } catch {
-      return null
-    }
+    try { return JSON.parse(localStorage.getItem('user') || 'null') }
+    catch { return null }
   })
 
-  // ── États pour le mode édition ────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false)
 
+  // ── Champs du formulaire ──────────────────────────────────────────────────
   const [form, setForm] = useState({
-    name: user?.name ?? '',
-    bio:  user?.bio  ?? '',
+    name:            user?.name  ?? '',
+    email:           user?.email ?? '',
+    bio:             user?.bio   ?? '',
+    // Les champs mot de passe sont vides par défaut — l'utilisateur ne les
+    // remplit que s'il veut changer son mot de passe
+    currentPassword: '',
+    newPassword:     '',
+    confirmPassword: '',
   })
 
-  // photoFile = le fichier sélectionné (objet File du navigateur)
-  // photoPreview = l'URL locale pour afficher l'aperçu avant upload
   const [photoFile, setPhotoFile]       = useState(null)
   const [photoPreview, setPhotoPreview] = useState(user?.photoUrl ?? '')
-
-  const [saving, setSaving]       = useState(false)
-  const [saveError, setSaveError] = useState('')
+  const [saving, setSaving]             = useState(false)
+  const [saveError, setSaveError]       = useState('')
 
   const isInstructeur = user?.role === 'INSTRUCTEUR'
 
-  // ── Déconnexion ───────────────────────────────────────────────────────────
   function logout() {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -43,16 +38,10 @@ export function ProfilPage() {
     navigate('/', { replace: true })
   }
 
-  // ── Mise à jour des champs texte ─────────────────────────────────────────
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  // ── Sélection d'un fichier photo ──────────────────────────────────────────
-  // Quand l'utilisateur choisit un fichier :
-  //   1. On stocke l'objet File pour l'envoyer plus tard
-  //   2. On crée une URL locale (URL.createObjectURL) pour afficher l'aperçu
-  //      sans avoir à l'uploader d'abord — c'est instantané
   function handlePhotoChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -60,25 +49,47 @@ export function ProfilPage() {
     setPhotoPreview(URL.createObjectURL(file))
   }
 
-  // ── Sauvegarde du profil ──────────────────────────────────────────────────
+  // ── Sauvegarde ───────────────────────────────────────────────────────────
   async function handleSave(e) {
     e.preventDefault()
-    setSaving(true)
     setSaveError('')
 
+    // Validation côté frontend avant d'envoyer quoi que ce soit
+    if (form.newPassword && form.newPassword !== form.confirmPassword) {
+      setSaveError('Les deux nouveaux mots de passe ne correspondent pas.')
+      return
+    }
+
+    setSaving(true)
     try {
-      // Étape 1 : si un nouveau fichier a été sélectionné, on l'uploade d'abord
-      if (photoFile) {
-        await api.instructors.uploadPhoto(photoFile)
+      // ── Appel 1 : infos du compte (nom, email, mdp) ──────────────────────
+      // On construit l'objet à envoyer — on n'inclut newPassword et
+      // currentPassword que si l'utilisateur a rempli le champ
+      const accountPayload = { name: form.name, email: form.email }
+      if (form.newPassword) {
+        accountPayload.currentPassword = form.currentPassword
+        accountPayload.newPassword     = form.newPassword
+      }
+      const updatedAccount = await api.users.updateMe(accountPayload)
+
+      // ── Appel 2 : bio (instructeurs seulement) ───────────────────────────
+      let updatedProfile = {}
+      if (isInstructeur) {
+        updatedProfile = await api.instructors.updateMyProfile({ bio: form.bio })
       }
 
-      // Étape 2 : on met à jour le nom et la bio
-      const updated = await api.instructors.updateMyProfile(form)
+      // ── Appel 3 : photo (instructeurs seulement, si nouveau fichier) ─────
+      if (isInstructeur && photoFile) {
+        updatedProfile = await api.instructors.uploadPhoto(photoFile)
+      }
 
-      const newUser = { ...user, ...updated }
+      // On fusionne tout et on met à jour localStorage + state
+      const newUser = { ...user, ...updatedAccount, ...updatedProfile }
       localStorage.setItem('user', JSON.stringify(newUser))
       setUser(newUser)
       setPhotoFile(null)
+      // On vide les champs mot de passe après sauvegarde
+      setForm((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }))
       setIsEditing(false)
 
     } catch (err) {
@@ -88,16 +99,21 @@ export function ProfilPage() {
     }
   }
 
-  // ── Annulation ────────────────────────────────────────────────────────────
   function handleCancel() {
-    setForm({ name: user?.name ?? '', bio: user?.bio ?? '' })
+    setForm({
+      name:            user?.name  ?? '',
+      email:           user?.email ?? '',
+      bio:             user?.bio   ?? '',
+      currentPassword: '',
+      newPassword:     '',
+      confirmPassword: '',
+    })
     setPhotoFile(null)
     setPhotoPreview(user?.photoUrl ?? '')
     setSaveError('')
     setIsEditing(false)
   }
 
-  // ── Pas connecté ──────────────────────────────────────────────────────────
   if (!user) {
     return (
       <section className="card" style={{ textAlign: 'left' }}>
@@ -111,45 +127,29 @@ export function ProfilPage() {
     <section className="card" style={{ textAlign: 'left' }}>
       <h1 style={{ marginTop: 0 }}>Mon profil</h1>
 
-      {/* ── MODE LECTURE ───────────────────────────────────────────────── */}
+      {/* ── MODE LECTURE ─────────────────────────────────────────────────── */}
       {!isEditing && (
         <>
-          {/* Photo de profil (instructeurs seulement) */}
           {isInstructeur && (
             <div style={{ marginBottom: '1.25rem' }}>
               {user.photoUrl ? (
                 <img
-                  // Si l'URL commence par "/uploads", on préfixe avec l'URL du backend
                   src={user.photoUrl.startsWith('/') ? `http://localhost:4000${user.photoUrl}` : user.photoUrl}
                   alt="Photo de profil"
-                  style={{
-                    width: 100, height: 100,
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '2px solid rgba(255,255,255,0.15)',
-                  }}
+                  style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)' }}
                 />
               ) : (
-                // Avatar initiales si pas de photo
-                <div style={{
-                  width: 100, height: 100, borderRadius: '50%',
-                  background: 'var(--primary, #0ea5e9)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '2rem', fontWeight: 700, color: '#fff',
-                }}>
+                <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--primary, #0ea5e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: '#fff' }}>
                   {user.name?.split(' ').map(m => m[0]).slice(0, 2).join('').toUpperCase()}
                 </div>
               )}
             </div>
           )}
 
-          {/* Infos de base */}
           <div style={{ display: 'grid', gap: 8 }}>
             <div><strong>Nom</strong> : {user.name}</div>
             <div><strong>Email</strong> : {user.email}</div>
             <div><strong>Rôle</strong> : {user.role}</div>
-
-            {/* Bio (instructeurs seulement) */}
             {isInstructeur && (
               <div style={{ marginTop: 4 }}>
                 <strong>Bio</strong> :{' '}
@@ -161,14 +161,10 @@ export function ProfilPage() {
             )}
           </div>
 
-          {/* Boutons */}
           <div style={{ marginTop: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {/* Le bouton "Modifier" n'apparaît que pour les instructeurs */}
-            {isInstructeur && (
-              <button type="button" onClick={() => setIsEditing(true)}>
-                Modifier mon profil
-              </button>
-            )}
+            <button type="button" onClick={() => setIsEditing(true)}>
+              Modifier mon profil
+            </button>
             <button type="button" onClick={logout}>
               Se déconnecter
             </button>
@@ -176,72 +172,89 @@ export function ProfilPage() {
         </>
       )}
 
-      {/* ── MODE ÉDITION (instructeurs seulement) ──────────────────────── */}
+      {/* ── MODE ÉDITION ─────────────────────────────────────────────────── */}
       {isEditing && (
-        <form onSubmit={handleSave} style={{ display: 'grid', gap: 14, maxWidth: 520 }}>
+        <form onSubmit={handleSave} style={{ display: 'grid', gap: 20, maxWidth: 520 }}>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span>Nom</span>
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
-          </label>
+          {/* ── Section : infos du compte ─────────────────────────────────── */}
+          <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '1rem' }}>
+            <legend style={{ padding: '0 8px', opacity: 0.6, fontSize: '0.85rem' }}>Informations du compte</legend>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span>Bio</span>
-            {/* textarea pour les textes longs */}
-            <textarea
-              name="bio"
-              value={form.bio}
-              onChange={handleChange}
-              rows={4}
-              maxLength={1000}
-              placeholder="Présente-toi en quelques lignes…"
-              style={{ resize: 'vertical', fontFamily: 'inherit', padding: '0.5rem' }}
-            />
-            {/* Compteur de caractères pour que l'utilisateur sache où il en est */}
-            <span style={{ fontSize: '0.75rem', opacity: 0.4, textAlign: 'right' }}>
-              {form.bio.length} / 1000
-            </span>
-          </label>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span>Nom</span>
+                <input name="name" value={form.name} onChange={handleChange} required />
+              </label>
 
-          <label style={{ display: 'grid', gap: 8 }}>
-            <span>Photo de profil</span>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span>Adresse email</span>
+                <input name="email" type="email" value={form.email} onChange={handleChange} required />
+              </label>
+            </div>
+          </fieldset>
 
-            {/* Aperçu : on montre la preview locale si un fichier est choisi,
-                sinon la photo actuelle depuis le serveur */}
-            {photoPreview && (
-              <img
-                src={photoPreview}
-                alt="Aperçu"
-                style={{
-                  width: 90, height: 90, borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '2px solid rgba(255,255,255,0.2)',
-                }}
-              />
-            )}
+          {/* ── Section : changer le mot de passe ────────────────────────── */}
+          {/* Ces champs sont optionnels — laisser vide = ne pas changer le mdp */}
+          <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '1rem' }}>
+            <legend style={{ padding: '0 8px', opacity: 0.6, fontSize: '0.85rem' }}>Changer le mot de passe <span style={{ opacity: 0.5 }}>(optionnel)</span></legend>
 
-            {/* L'input type="file" ouvre le sélecteur de fichiers du système.
-                accept= limite les types visibles dans le sélecteur */}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={handlePhotoChange}
-              style={{ fontSize: '0.9rem' }}
-            />
-            <span style={{ fontSize: '0.75rem', opacity: 0.4 }}>
-              JPG, PNG, WEBP ou GIF — 3 Mo max
-            </span>
-          </label>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span>Mot de passe actuel</span>
+                <input name="currentPassword" type="password" value={form.currentPassword} onChange={handleChange} autoComplete="current-password" />
+              </label>
 
-          {/* Message d'erreur si la sauvegarde échoue */}
-          {saveError && (
-            <p style={{ color: '#ef4444', margin: 0 }}>{saveError}</p>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span>Nouveau mot de passe</span>
+                <input name="newPassword" type="password" value={form.newPassword} onChange={handleChange} minLength={8} autoComplete="new-password" />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span>Confirmer le nouveau mot de passe</span>
+                <input name="confirmPassword" type="password" value={form.confirmPassword} onChange={handleChange} minLength={8} autoComplete="new-password" />
+              </label>
+            </div>
+          </fieldset>
+
+          {/* ── Section : profil instructeur ──────────────────────────────── */}
+          {isInstructeur && (
+            <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '1rem' }}>
+              <legend style={{ padding: '0 8px', opacity: 0.6, fontSize: '0.85rem' }}>Profil instructeur</legend>
+
+              <div style={{ display: 'grid', gap: 12 }}>
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <span>Bio</span>
+                  <textarea
+                    name="bio"
+                    value={form.bio}
+                    onChange={handleChange}
+                    rows={4}
+                    maxLength={1000}
+                    placeholder="Présente-toi en quelques lignes…"
+                    style={{ resize: 'vertical', fontFamily: 'inherit', padding: '0.5rem' }}
+                  />
+                  <span style={{ fontSize: '0.75rem', opacity: 0.4, textAlign: 'right' }}>
+                    {form.bio.length} / 1000
+                  </span>
+                </label>
+
+                <label style={{ display: 'grid', gap: 8 }}>
+                  <span>Photo de profil</span>
+                  {photoPreview && (
+                    <img
+                      src={photoPreview.startsWith('/') ? `http://localhost:4000${photoPreview}` : photoPreview}
+                      alt="Aperçu"
+                      style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.2)' }}
+                    />
+                  )}
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoChange} style={{ fontSize: '0.9rem' }} />
+                  <span style={{ fontSize: '0.75rem', opacity: 0.4 }}>JPG, PNG, WEBP ou GIF — 3 Mo max</span>
+                </label>
+              </div>
+            </fieldset>
           )}
+
+          {saveError && <p style={{ color: '#ef4444', margin: 0 }}>{saveError}</p>}
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button type="submit" disabled={saving}>

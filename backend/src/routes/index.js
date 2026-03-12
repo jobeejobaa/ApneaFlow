@@ -6,6 +6,7 @@ const authController = require('../modules/auth/auth.controller');
 const coursesController = require('../modules/courses/courses.controller');
 const enrollmentsController = require('../modules/enrollments/enrollments.controller');
 const instructorsController = require('../modules/instructors/instructors.controller');
+const usersController       = require('../modules/users/users.controller');
 const { upload } = require('../config/upload');
 
 const router = Router();
@@ -40,6 +41,9 @@ router.get(
   authenticateJWT,
   enrollmentsController.getMyEnrollments
 );
+
+// Mon compte (tous rôles) — nom, email, mot de passe
+router.patch('/users/me', authenticateJWT, usersController.updateMe);
 
 // Instructors (public read)
 router.get('/instructors', instructorsController.list);

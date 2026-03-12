@@ -92,6 +92,16 @@ export const api = {
       request('/api/me/enrollments'),
   },
 
+  // ── Mon compte (tous rôles) ───────────────────────────────────────────────
+  users: {
+    // data peut contenir : { name?, email?, currentPassword?, newPassword? }
+    updateMe: (data) =>
+      request('/api/users/me', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+  },
+
   // ── Instructeurs ──────────────────────────────────────────────────────────
   instructors: {
     // Récupère tous les instructeurs (public)
